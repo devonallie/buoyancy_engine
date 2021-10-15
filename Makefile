@@ -1,13 +1,13 @@
-MCU=atmega32u4
+MCU=m328p
 PROGRAMMER=avr109
-F_CPU=16000000L
-BAUD=57600
+F_CPU=20000000L
+BAUD=9600
 PORT=/dev/ttyACM0
 CC=avr-g++
 OBJCOPY=avr-objcopy
 CFLAGS=-Wall -Wextra -g -Os -mmcu=${MCU} -DF_CPU=${F_CPU} -I.
 TARGET=main
-SRCS=main.cpp
+SRCS=main.c
 
 
 all:

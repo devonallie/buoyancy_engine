@@ -1,4 +1,5 @@
 import tkinter as tk
+import guiListbox
 
 class MainGUIWindow:
     def __init__(self):
@@ -10,19 +11,19 @@ class MainGUIWindow:
 
         self.root.columnconfigure(index = 0,
                                   weight = 1)
-        self.root.rowconfigure(index = 3,
+        self.root.rowconfigure(index = 4,
                                weight = 1)
 
         self.quitButton = tk.Button(master = self.root,
                                     command = self.root.destroy,
                                     text = 'Quit')
-        self.quitButton.grid(row = 4,
+        self.quitButton.grid(row = 5,
                              column = 2,
                              padx = self.PAD,
                              pady = self.PAD,
                              sticky = 'SE')
 
-        self.tempButton = tk.Button(self.root, command = self.printWindowSize, text='Temp').grid(row=4, column=0)
+        #self.tempButton = tk.Button(self.root, command = self.printWindowSize, text='Temp').grid(row=4, column=0)
 
         # timeFrame
         self.timeFrame = tk.Frame(master = self.root,
@@ -30,7 +31,7 @@ class MainGUIWindow:
         self.timeFrame.grid(row = 1,
                             column = 0,
                             columnspan = 3,
-                            rowspan = 2,
+                            rowspan = 3,
                             padx=self.PAD,
                             pady=self.PAD,
                             sticky = 'NW')
@@ -49,16 +50,16 @@ class MainGUIWindow:
                             padx = self.PAD,
                             pady = self.PAD)
         # hourBox
-        self.hourTextBox = tk.Text(master = self.timeFrame,
+        self.timeTextBox = tk.Text(master = self.timeFrame,
                                    width = 12,
                                    height = 1)
-        self.hourTextBox.grid(column = 1,
+        self.timeTextBox.grid(column = 1,
                               row = 1)
-        self.hourTextBox.insert(tk.END, 'HH:MM:DD')
+        self.timeTextBox.insert(tk.END, 'HH:MM:DD')
         # hourLabel
-        self.hourLabel = tk.Label(master = self.timeFrame,
+        self.timeLabel = tk.Label(master = self.timeFrame,
                                   text = 'Time in UTC')
-        self.hourLabel.grid(row = 0,
+        self.timeLabel.grid(row = 0,
                             column = 1,
                             padx = self.PAD,
                             pady = self.PAD)
@@ -76,9 +77,28 @@ class MainGUIWindow:
                                column = 2,
                                padx = self.PAD,
                                pady = self.PAD)
+        self.addButton = tk.Button(master = self.timeFrame,
+                                   command = self.addButtonClicked,
+                                   text = 'Add Entry')
+        self.addButton.grid(row = 3,
+                            column = 0,
+                            padx = self.PAD,
+                            pady = self.PAD,
+                            sticky = 'SW')
+
+        self.calendarListBox = guiListbox.createListBox(self)
+        guiListbox.addEntry(self.calendarListBox, 'date', 'time', 'depth')
 
         self.root.mainloop()
+
 
     def printWindowSize(self):
             print(self.root.winfo_width())
             print(self.root.winfo_height())
+
+
+    def addButtonClicked(self):
+        date = self.dateTextBox.get('1.0', tk.END)
+        time = self.timeTextBox.get('1.0', tk.END)
+        depth = self.depthTextBox.get('1.0', tk.END)
+        guiListbox.addEntry(self.calendarListBox, date, time, depth)

@@ -12,107 +12,65 @@
  * All defined variables and data structures will be moved to their own header
  * file(s) eventually.
  */
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <unistd.h>
 #include <avr/interrupt.h> 
+#include <avr/io.h>
+#include <util/delay.h>
+#include <Wire.h>
+//#include "RTClib.h"
 
-#define PORT1A 0b00000010
+//RTC_DS1307 rtc; //proposed model for the rtc?
 
-#define SURFACE 0
-#define MAX_DEPTH 800
+#define LOW_BATTERY_THRESHOLD 10;
+#define ADC_BIT_WIDTH 1024 // 2^10, 10 bits
 
-typedef enum command_type{
-	UNSET;
-	CALENDAR;
-	USER;
-	NETWORK;
-	LOW_BATTERY
-}Command;
-
-Command command_type = UNSET;
-
-void interrupt_init(void);
-void configure_calendar(void);
-void configure_network(void);
-
-int main(int argc, char** argv)
-{
-	char option;
-
-	while((option = getopt(argc, argv, "cu:n")) != -1) {
-		switch(option) {
-		case 'c':
-			command_type = CALENDAR;
-			configure_calendar();
-		break;
-		case 'u':
-			command_type = USER;
-		break;
-		case 'n':
-			command_type = NETWORK;
-			configure_network();
-		break;
-		}
+typedef union {
+	struct {
+		uint8_t ADCL : 8;
+		uint8_t ADCH  : 2;
 	}
-	interrupt_init();
-	while(true) {
-		//stuff goes here of course
-	}
-	return EXIT_SUCCESS;
-}
+	uint16_t jerry;	
+} ADC_val;
 
-void configure_calendar(void)
+int counter = 0;
+
+void pressure_sensor_init (void);
+void battery_init (void);
+
+int main (void)
 {
-	if(!calendar_set) {
-		printf("No calendar detected, provide path to CSV\n");
-		load_csv();
-	}else {
-		printf("Do you want to update the calendar? (Y/N)\n");
-		while(true) {
-			char[30] response;
-			fscanf(fstream, "%s", response);
-			switch(response) {
-			case "Y\n":
-				load_csv();
-				return;
-			case "N\n":
-				return;
-			default:
-				printf("Invalid response, idiot.\n");
-				break;
-			}
-		}
-
-	}
-	return;
-}
-
-void load_csv(fstream path)
-{
-	int i = 0;
-	/*
-	while(fscanf(fstream, //https://ideone.com/08zlcB see here for better version
-	{
-	calendar_set = true;
-	*/
-	return;
-}
-
-
-void configure_network(void)
-{
-}
-
-void interrupt_init(void)
-{
-	DDR1A |= PORT1A;
-	TIMKS0 = TOIE0;
+	battery_init ();
 	sei();
+	while (true) {
+	}
+	return 0;
 }
 
-ISR (TIMER0_OVF_vect)
+void battery_init (void)
 {
-	PORTA1 ~= PORTA1;
+	DDRD   |=  _BV (OC0A); // output compare pin set to write
+	TCCR0A |= (_BV (COM0A1)) | (_BV (COM0A1)); //sets PD6 HIGH on OCR0A match
+	TCCR0B |=  _BV (CS00) // no prescaler
+	OCR0A   =   255; //random number for now, to be updated with formula based on F_CPU and polling rate for batter
+
+	ADMUX   =  _BV (MUX1); //ADC2
+	ADCSRA  = (_BV (ADEN))   | (_BV (ADIE) | (_BV (ADATE); //adc interrupt on trigger
+	ADCSRB  = (_BV (ADTS1))  | (_BV (ADTS0));	//adc trigger being OCR0A match
+}
+
+void pressure_sensor_init (void)
+{
+	TWAR = 0x76 << 1; // address of the MS5837 shifted one because TWGCE is lsb 
+	TWBR = 2// pg 221 gves the formula for this but with 16 mHz, no pre-scale, we get 0.8 mHz
+	TWCR = (_BV (TWIE) | (_BV (TWEN)); // enables TWI interrupts and TWI
+}
+
+ISR (ADC_vect) //triggers when ADC conversion is complete which starts when compare match occurs on OCR0A
+{
+	ADV_val levels;
+	levels.ADCL = ADCL;
+	levels.ADCH = ADCH;
+
+	if (levels.jerry/ADC_BIT_WIDTH < LOW_BATTERY_THRESHOLD) {
+		//interact with motor
+	}
 }

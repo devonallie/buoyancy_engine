@@ -1,8 +1,8 @@
-MCU=m328p
-PROGRAMMER=avr109
-F_CPU=20000000L
-BAUD=9600
-PORT=/dev/ttyACM0
+MCU=atmega328p
+PROGRAMMER=arduino
+BAUD=57600
+F_CPU=16000000UL
+PORT=/dev/cu.usbserial-110
 CC=avr-g++
 OBJCOPY=avr-objcopy
 CFLAGS=-Wall -Wextra -g -Os -mmcu=${MCU} -DF_CPU=${F_CPU} -I.
@@ -15,7 +15,7 @@ all:
 	${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.bin ${TARGET}.hex
 
 flash:	
-	avrdude -v -p ${MCU} -c ${PROGRAMMER} -U flash:w:${TARGET}.hex:i -P ${PORT} -D
+	avrdude -v -p ${MCU} -c ${PROGRAMMER} -b ${BAUD} -U flash:w:${TARGET}.hex:i -P ${PORT} -D
 
 clean:
 	rm -f *.bin *.hex *.o

@@ -15,7 +15,6 @@
 #include <avr/interrupt.h> 
 #include <avr/io.h>
 #include <util/delay.h>
-#include <Wire.h>
 //#include "RTClib.h"
 
 //RTC_DS1307 rtc; //proposed model for the rtc?

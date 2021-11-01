@@ -85,9 +85,39 @@ class MainGUIWindow:
                             padx = self.PAD,
                             pady = self.PAD,
                             sticky = 'SW')
+        self.removeButton = tk.Button(master = self.timeFrame,
+                                      command = self.removeButtonClicked,
+                                      text = "Remove Entry",
+                                      state = tk.DISABLED)
+        self.removeButton.grid(row = 3,
+                               column = 1,
+                               padx = self.PAD,
+                               pady = self.PAD,
+                               sticky = 'SW')
+
+        self.calendarFrame = tk.Frame(master = self.root)
+        self.calendarFrame.grid(row = 4,
+                                column = 0,
+                                columnspan = 4,
+                                padx = self.PAD,
+                                pady = self.PAD,
+                                sticky = 'NESW')
+        self.calendarFrame.columnconfigure(index = 0,
+                                           weight = 2)
+        self.calendarFrame.rowconfigure(index = 1,
+                                        weight = 2)
+        self.calendaLabel = tk.Label(master = self.calendarFrame,
+                                     text = '{0:^25} {1:^25} {2:^15}'.format('date', 'time', 'depth'))
+        self.calendaLabel.grid(row = 0,
+                               column = 0,
+                               columnspan = 3,
+                               padx = self.PAD,
+                               pady = self.PAD,
+                               sticky = 'NW')
 
         self.calendarListBox = guiListbox.createListBox(self)
-        guiListbox.addEntry(self.calendarListBox, 'date', 'time', 'depth')
+
+        self.autoUpdate()
 
         self.root.mainloop()
 
@@ -102,3 +132,16 @@ class MainGUIWindow:
         time = self.timeTextBox.get('1.0', tk.END)
         depth = self.depthTextBox.get('1.0', tk.END)
         guiListbox.addEntry(self.calendarListBox, date, time, depth)
+
+    
+    def removeButtonClicked(self):
+        guiListbox.removeEntry(self.calendarListBox)
+
+
+    def autoUpdate(self):
+        # Referenced https://stackoverflow.com/questions/15672552/tkinter-listbox-getactive-method
+        if (self.calendarListBox.size() > 0):
+            self.removeButton.configure(state = tk.ACTIVE)
+        else:
+            self.removeButton.configure(state = tk.DISABLED)
+        self.root.after(10, self.autoUpdate)

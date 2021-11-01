@@ -1,4 +1,4 @@
-GUI\GUI\*
-GUI\GUI\
-GUI\__pycache__\*
-GUI\__pycache__\
+GUI/GUI/*
+GUI/GUI/
+GUI/__pycache__/*
+GUI/__pycache__/

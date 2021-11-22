@@ -18,35 +18,32 @@
 #include <util/twi.h>
 #include <stdio.h>
 
-#define OC0A DDD6
-#define LOW_BATTERY_THRESHOLD 512
-#define ADC_BIT_WIDTH 1024 
-#define OCR0A_MAX 255
+#define AVCC _BV (REFS0)
+#define ADC_ON _BV (ADEN)
+#define ADC_START_CONVERSION _BV (ADSC)
+#define CONVERSION_IN_PROGRESS (ADCSRA & _BV (ADSC))
 
-typedef union adc_val {
-	struct {
-		uint8_t low  : 8;
-		uint8_t high : 2;
-	} byte;
-	uint16_t jerry;	
-} adc_val;
+/*CONFIG*/
 
+#define ADC_VREF AVCC
+#define ADC_PIN 0 
+#define ADC_PRESCALE 128 //2~128, by 2s
 
 void battery_init (void);
-
+uint16_t battery_read (void);
 
 void battery_init (void)
 {
+	ADMUX  |= ADC_VREF | ADC_PIN; //ADC0, external voltage refence
+	ADCSRA |= ADC_ON | ADC_PRESCALE; // sets ADC clock to 125 kHz which is within range of defined behaviour and max resolution 
+	DIDR0  |= ADC_PIN; //disable digital pin function, PIN7, and PIN7 not possible
+}
 
-	DDRB   |= _BV (OC0A); // output compare pin set to write
-	TIMSK0  = _BV (OCIE0A);
-	TCCR0A  = _BV (COM0A0) | _BV (WGM01); //toggles PD6 on OCR0A match
-	TCCR0B  = _BV (CS02)   | _BV (CS00); // div 1024
-	OCR0A   = OCR0A_MAX;
-	ADMUX   = _BV (MUX0) | _BV (REFS0); //ADC0, external voltage refence
-	ADCSRA  = _BV (ADEN) | _BV (ADATE) | _BV (ADIE) | _BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0); //adc interrupt on trigger and prescale sets ADC clock to 125 kHz which is within range of defined behaviour and max resolution
-	ADCSRB  = _BV (ADTS1)| _BV (ADTS0); //trigger adc ISR on OCR0A match 
-	DIDR0   = _BV (ADC0D); //disable digital pin function
+uint16_t battery_read (void)
+{
+	ADCSRA |= ADC_START_CONVERSION;
+	while (CONVERSION_IN_PROGRESS);
+	return ADCW;
 }
 
 //this wont work properly because there are some things i'm not seeing. more at 11'

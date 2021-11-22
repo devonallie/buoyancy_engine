@@ -12,35 +12,48 @@
  * All defined variables and data structures will be moved to their own header
  * file(s) eventually.
  */
+#ifndef USART_C
+#define USART_C
 #include <avr/io.h>
 #include <stdio.h>
 
 #define F_CPU 16000000UL
 #define USART_BAUD 9600
-#define BAUD_PRESCALE (((F_CPU / (USART_BAUD * 16UL))) - 1)
+#define UBRR (((F_CPU / (USART_BAUD * 16UL))) - 1)
 #define MAX_STRING_SIZE 1024
+#define BAUD_HIGH_BYTE (UBRR >> 8)
+#define BAUD_LOW_BYTE UBRR
+#define DATA_FRAME_SIZE_8 (_BV (UCSZ01) | _BV (UCSZ00))
+#define TRANSMIT_ENABLE _BV (TXEN0)
+#define RECEIVE_ENABLE _BV (RXEN0)
 
 void usart_init (void);
-void usart_print (char str[MAX_STRING_SIZE]);
-
+void usart_write (char str[MAX_STRING_SIZE - 1]);
+uint8_t usart_read (void);
 
 void usart_init (void)
 {
-	UBRR0H = BAUD_PRESCALE >> 8;
-	UBRR0L = BAUD_PRESCALE;
-
-	UCSR0C = _BV (UCSZ01)| _BV (UCSZ00);
-	UCSR0B = _BV (RXEN0) | _BV (TXEN0);
+	UBRR0H = BAUD_HIGH_BYTE;
+	UBRR0L = BAUD_LOW_BYTE;
+	
+	UCSR0C = DATA_FRAME_SIZE_8; 
+	UCSR0B = _BV (RXCIE0) | TRANSMIT_ENABLE | RECEIVE_ENABLE;
 }
 
-void usart_print (char str[MAX_STRING_SIZE])
+void usart_write (char str[MAX_STRING_SIZE])
 {
 	while (*str) {
-		while ((UCSR0A & _BV (UDRE0)) == 0); // Do nothing until UDR is ready
-		UDR0 = *str++;
+		while (!(UCSR0A & _BV (UDRE0))); // Do nothing until UDR is ready
+	UDR0 = *str++;
 	}
 }
 
+uint8_t usart_read (void)
+{
+	while (!(UCSR0A & _BV (UDRE0)));
+	return UDR0;
+}
 
-
-//this wont work properly because there are some things i'm not seeing. more at 11'
+//this wont work properly because there are some things i'm not seeing. more at 11
+//
+#endif

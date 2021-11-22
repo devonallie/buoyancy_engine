@@ -12,32 +12,48 @@
  * All defined variables and data structures will be moved to their own header
  * file(s) eventually.
  */
-#include <avr/interrupt.h> 
 #include <avr/io.h>
-#include <util/delay.h>
-#include <util/twi.h>
 #include <stdio.h>
 
-#define OC2B DDD2
+#define PWM_OC1A 		 _BV (DDB1)
+#define SERVO_BIAS_PIN		 _BV (DDB0)
+#define SET_OC1A_ON_UP_COUNT	(_BV (COM1A1) | _BV (COM1A0))
+#define WAVE_GEN_MODE_8		 _BV (WGM13) //Phase correct & frequency correct PWM
+
+#define N_1024			(_BV (CS12) | _BV (CS10))
+#define N_256			 _BV (CS12)
+#define N_64			(_BV (CS11) | _BV (CS10))
+#define N_8			 _BV (CS11)
+#define N_1			 _BV (CS10)
+
+/* CONFIGURATION */
+#define F_CPU 16000000UL
+#define CLK_PRESCALE N_1024
+#define F_PWM 50000
+#define DUTY_CYCLE_PERCENT 50
+
+void servo_init (void);
+void servo_start (void);
+void servo_stop (void);
 
 void servo_init (void)
 {
-	DDRD |= _BV (OC2B) | _BV (PORTD2);
-	TCCR2A = _BV (COM2B1) | _BV (COM2B0) | _BV (WGM20);
-	TCCR2B = _BV (WGM22) | _BV (CS20);
+	DDRB   |= PWM_OC1A		| SERVO_BIAS_PIN;
+	TCCR1A  = SET_OC1A_ON_UP_COUNT;
+	TCCR1B  = WAVE_GEN_MODE_8	| CLK_PRESCALE;
+}
+	
+void servo_start (void)
+{
+	PRR   &= ~_BV (PRTIM1); // clear powersaving bit that disable timer2
+	PORTD |= SERVO_BIAS_PIN;
+	ICR1   = F_CPU/F_PWM/(1 << (CLK_PRESCALE + 1));
+	OCR1A  = (ICR1*DUTY_CYCLE_PERCENT)/100;		// some forumla based on OCR2A and the input of pwm_freq
 }
 
-void run_servo (uint8_t duty_cycle)
+void servo_stop (void)
 {
-	PRR &= ~_BV (PRTIM2); // clear powersaving bit that disable timer2
-	servo_inti ();	
-	PORTD |= _BV (PORTD2);	// registers must be reinit after powering on according to datasheet
-	OCR2A = duty_cycle*255;		// some forumla based on OCR2A and the input of pwm_freq
-}
-
-void stop_servo (void)
-{
-	PRR |= _BV (PRTIM2);
+	PRR |= _BV (PRTIM1);
 }
 
 //this wont work properly because there are some things i'm not seeing. more at 11'

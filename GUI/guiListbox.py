@@ -1,4 +1,5 @@
 import tkinter as tk
+import datetime
 
 def createListBox(self):
     listBox = tk.Listbox(master = self.calendarFrame,
@@ -15,7 +16,20 @@ def createListBox(self):
 
 
 def addEntry(listBox, date, time, depth):
-    listBox.insert(tk.END, '{0:^15}  {1:^15}    {2:^15}'.format(date, time, depth))
+    depthFailed = -1
+    timeFailed = -2
+    passed = 1
+    if ((type(depth) is not str) and (depth <= 800)):
+        # Depth is good
+        try:
+            date = datetime.datetime.strftime(date, '%Y-%m-%d')
+            epochdate = datetime.datetime.strptime(date + 'T' + time, '%Y-%m-%dT%H:%M:%S')
+            listBox.insert(tk.END, '{0:^15}  {1:^15}  {2:^15}'.format(date, time, depth))
+            return passed
+        except:
+            return timeFailed
+    else:
+        return depthFailed    
 
 
 def removeEntry(listBox):

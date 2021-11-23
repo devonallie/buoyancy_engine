@@ -1,4 +1,7 @@
 import tkinter as tk
+from babel.core import Locale
+import tkcalendar
+import datetime
 import guiListbox
 
 class MainGUIWindow:
@@ -23,25 +26,22 @@ class MainGUIWindow:
                              pady = self.PAD,
                              sticky = 'SE')
 
-        #self.tempButton = tk.Button(self.root, command = self.printWindowSize, text='Temp').grid(row=4, column=0)
-
         # timeFrame
         self.timeFrame = tk.Frame(master = self.root,
                                   borderwidth = 1)
         self.timeFrame.grid(row = 1,
                             column = 0,
-                            columnspan = 3,
+                            columnspan = 4,
                             rowspan = 3,
                             padx=self.PAD,
                             pady=self.PAD,
                             sticky = 'NW')
         # dateTextBox
-        self.dateTextBox = tk.Text(master = self.timeFrame,
-                                   height = 1,
-                                   width = 12)
-        self.dateTextBox.grid(column = 0,
-                              row = 1)
-        self.dateTextBox.insert(tk.END, 'YYYY-MM-DD')
+        self.dateEntry = tkcalendar.DateEntry(master = self.timeFrame,
+                                              date_pattern = 'y-mm-dd')
+        #self.dateEntry.set_date(date = datetime.datetime.date)
+        self.dateEntry.grid(column = 0,
+                            row = 1)
         # dateLabel
         self.dateLabel = tk.Label(master = self.timeFrame,
                                   text = 'Date in ISO format')
@@ -94,9 +94,16 @@ class MainGUIWindow:
                                padx = self.PAD,
                                pady = self.PAD,
                                sticky = 'SW')
+        self.warnlabel = tk.Label(master = self.timeFrame)
+        self.warnlabel.grid(row = 4,
+                            column = 0,
+                            columnspan = 3,
+                            padx = self.PAD,
+                            pady = self.PAD,
+                            sticky = 'SW')
 
         self.calendarFrame = tk.Frame(master = self.root)
-        self.calendarFrame.grid(row = 4,
+        self.calendarFrame.grid(row = 5,
                                 column = 0,
                                 columnspan = 4,
                                 padx = self.PAD,
@@ -128,12 +135,32 @@ class MainGUIWindow:
 
 
     def addButtonClicked(self):
-        date = self.dateTextBox.get('1.0', tk.END)
-        time = self.timeTextBox.get('1.0', tk.END)
-        depth = self.depthTextBox.get('1.0', tk.END)
-        guiListbox.addEntry(self.calendarListBox, date, time, depth)
+        depthFailed = -1
+        timeFailed = -2
+        printstr = tk.StringVar()
+        date = self.dateEntry.get_date()
+        time = self.timeTextBox.get('1.0', tk.END)[:-1]
 
-    
+        try:
+            depth = int(self.depthTextBox.get('1.0', tk.END))
+        except:
+            status = depthFailed
+            depth = repr(self.depthTextBox.get('1.0', tk.END))[:-1]
+
+        status = guiListbox.addEntry(self.calendarListBox, date, time, depth)
+        if (status == depthFailed):
+            printstr.set('Incorrect depth ' + str(depth) + ' Depth must be below 800')
+            self.warnlabel.configure(textvariable = printstr,
+                                     fg = 'red')
+        elif (status == timeFailed):
+            printstr.set('Incorrect time format {}. Time format: HH:MM:SS'.format(time))
+            self.warnlabel.configure(textvariable = printstr,
+                                     fg = 'red')
+        else:
+            printstr.set(' ')
+            self.warnlabel.configure(textvariable = printstr)
+        
+
     def removeButtonClicked(self):
         guiListbox.removeEntry(self.calendarListBox)
 

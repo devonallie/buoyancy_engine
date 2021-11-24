@@ -11,6 +11,7 @@ class MainGUIWindow:
         self.root.minsize(width = 335,
                           height = 109)
         self.PAD = 5
+        self.calendarEntries = []
 
         self.root.columnconfigure(index = 0,
                                   weight = 1)
@@ -70,6 +71,7 @@ class MainGUIWindow:
                              column = 2,
                              padx = self.PAD,
                              pady = self.PAD)
+        # Depth textbox
         self.depthTextBox = tk.Text(master = self.timeFrame,
                                     width = 12,
                                     height = 1)
@@ -77,6 +79,7 @@ class MainGUIWindow:
                                column = 2,
                                padx = self.PAD,
                                pady = self.PAD)
+        # Add button
         self.addButton = tk.Button(master = self.timeFrame,
                                    command = self.addButtonClicked,
                                    text = 'Add Entry')
@@ -85,6 +88,7 @@ class MainGUIWindow:
                             padx = self.PAD,
                             pady = self.PAD,
                             sticky = 'SW')
+        # remove button
         self.removeButton = tk.Button(master = self.timeFrame,
                                       command = self.removeButtonClicked,
                                       text = "Remove Entry",
@@ -94,6 +98,7 @@ class MainGUIWindow:
                                padx = self.PAD,
                                pady = self.PAD,
                                sticky = 'SW')
+        # Warn label
         self.warnlabel = tk.Label(master = self.timeFrame)
         self.warnlabel.grid(row = 4,
                             column = 0,
@@ -102,6 +107,7 @@ class MainGUIWindow:
                             pady = self.PAD,
                             sticky = 'SW')
 
+        # Calendar Frame
         self.calendarFrame = tk.Frame(master = self.root)
         self.calendarFrame.grid(row = 5,
                                 column = 0,
@@ -113,16 +119,35 @@ class MainGUIWindow:
                                            weight = 2)
         self.calendarFrame.rowconfigure(index = 1,
                                         weight = 2)
+        # Calendar label
         self.calendaLabel = tk.Label(master = self.calendarFrame,
-                                     text = '{0:^25} {1:^25} {2:^15}'.format('date', 'time', 'depth'))
+                                     text = 'date              time              depth         time (epoch)',
+                                     width = 30,
+                                     justify = 'center')
         self.calendaLabel.grid(row = 0,
                                column = 0,
                                columnspan = 3,
                                padx = self.PAD,
                                pady = self.PAD,
-                               sticky = 'NW')
-
+                               sticky = 'NESW')
+        # Create listbox
         self.calendarListBox = guiListbox.createListBox(self)
+
+        # Send Frame
+        self.sendFrame = tk.Frame(master = self.root)
+        self.sendFrame.grid(row = 6,
+                            column = 0,
+                            columnspan = 4,
+                            padx = self.PAD,
+                            pady = self.PAD,
+                            sticky = 'NESW')
+        self.sendButton = tk.Button(master = self.sendFrame,
+                                    command = self.sendButtonClicked,
+                                    text = 'Send Schedule')
+        self.sendButton.grid(row = 0,
+                             column = 0,
+                             padx = self.PAD,
+                             pady = self.PAD)
 
         self.autoUpdate()
 
@@ -147,7 +172,7 @@ class MainGUIWindow:
             status = depthFailed
             depth = repr(self.depthTextBox.get('1.0', tk.END))[:-1]
 
-        status = guiListbox.addEntry(self.calendarListBox, date, time, depth)
+        status, epochtime = guiListbox.addEntry(self.calendarListBox, date, time, depth)
         if (status == depthFailed):
             printstr.set('Incorrect depth ' + str(depth) + ' Depth must be below 800')
             self.warnlabel.configure(textvariable = printstr,
@@ -159,10 +184,10 @@ class MainGUIWindow:
         else:
             printstr.set(' ')
             self.warnlabel.configure(textvariable = printstr)
-        
+
 
     def removeButtonClicked(self):
-        guiListbox.removeEntry(self.calendarListBox)
+        epochtime = guiListbox.removeEntry(self.calendarListBox)
 
 
     def autoUpdate(self):
@@ -172,3 +197,7 @@ class MainGUIWindow:
         else:
             self.removeButton.configure(state = tk.DISABLED)
         self.root.after(10, self.autoUpdate)
+
+
+    def sendButtonClicked(self):
+        guiListbox.getFullSchedule(self.calendarListBox)

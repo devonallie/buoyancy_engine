@@ -44,11 +44,16 @@ def getFullSchedule(listbox):
     calendarList = []
 
     for i in range(0,size):
-        currentIndex = listbox.get(i).split(' ')
-        while '' in currentIndex:
-            currentIndex.remove('')
+        currentIndex = splitIndex(listbox.get(i))
         calendarList.append(CalendarEntries(depth = currentIndex[2], time = currentIndex[3]))
         calendarList[i].printEntry()
+
+
+def splitIndex(currentIndex):
+    currentIndex = currentIndex.split(' ')
+    while '' in currentIndex:
+        currentIndex.remove('')
+    return currentIndex
 
 
 class CalendarEntries():

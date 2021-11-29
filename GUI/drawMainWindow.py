@@ -1,8 +1,11 @@
 import tkinter as tk
+import tkinter.filedialog as tkfd
 from babel.core import Locale
 import tkcalendar
 import datetime
 import guiListbox
+import csvModule
+import os
 
 class MainGUIWindow:
     def __init__(self):
@@ -56,7 +59,7 @@ class MainGUIWindow:
                                    height = 1)
         self.timeTextBox.grid(column = 1,
                               row = 1)
-        self.timeTextBox.insert(tk.END, 'HH:MM:DD')
+        self.timeTextBox.insert(tk.END, 'HH:MM:SS')
         # hourLabel
         self.timeLabel = tk.Label(master = self.timeFrame,
                                   text = 'Time in UTC')
@@ -145,18 +148,27 @@ class MainGUIWindow:
                                     command = self.sendButtonClicked,
                                     text = 'Send Schedule')
         self.sendButton.grid(row = 0,
-                             column = 0,
+                             column = 3,
                              padx = self.PAD,
                              pady = self.PAD)
+        self.exportButton = tk.Button(master = self.sendFrame,
+                                      command = self.exportToCSVButton,
+                                      text = 'Export to CSV')
+        self.exportButton.grid(row = 0,
+                               column = 1,
+                               padx = self.PAD,
+                               pady = self.PAD)
+        self.importButton = tk.Button(master = self.sendFrame,
+                                      command = self.importFromCSVButton,
+                                      text = 'Import from CSV')
+        self.importButton.grid(row = 0,
+                               column = 0,
+                               padx = self.PAD,
+                               pady = self.PAD)
 
         self.autoUpdate()
 
         self.root.mainloop()
-
-
-    def printWindowSize(self):
-            print(self.root.winfo_width())
-            print(self.root.winfo_height())
 
 
     def addButtonClicked(self):
@@ -201,3 +213,71 @@ class MainGUIWindow:
 
     def sendButtonClicked(self):
         guiListbox.getFullSchedule(self.calendarListBox)
+
+
+    def exportToCSVButton(self):
+        self.exportWindow = tk.Toplevel(self.root)
+        self.pathLabelVar = tk.StringVar()
+        self.pathLabelVar.set('Select a Path')
+        self.exportWindow.title('Export to CSV')
+        exportLabel = tk.Label(master = self.exportWindow,
+                               text = 'Filename')
+        exportLabel.grid(row = 0,
+                         column = 0,
+                         padx = self.PAD,
+                         pady = self.PAD,
+                         sticky = 'NW')
+        self.exportNameTextbox = tk.Text(master = self.exportWindow,
+                                    height = 1,
+                                    width = 20)
+        self.exportNameTextbox.insert(tk.END, 'schedule')
+        self.exportNameTextbox.grid(row = 1,
+                               column = 0,
+                               padx = self.PAD,
+                               pady = self.PAD,
+                               sticky = 'NW')
+        csvLabel = tk.Label(master = self.exportWindow,
+                            text = '.csv')
+        csvLabel.grid(row = 1,
+                      column = 1)
+        exportPathLabel = tk.Label(master = self.exportWindow,
+                             textvariable = self.pathLabelVar)
+        exportPathLabel.grid(row = 2,
+                             column = 0,
+                             padx = self.PAD,
+                             pady = self.PAD)
+        pathButton = tk.Button(master = self.exportWindow,
+                               command = self.getExportPath,
+                               text = 'select Path')
+        pathButton.grid(row = 2,
+                        column = 1,
+                        padx = self.PAD,
+                        pady = self.PAD)
+        okButton = tk.Button(master = self.exportWindow,
+                             text = 'Okay',
+                             command = self.exportOkButton)
+        okButton.grid(row = 3,
+                      column = 1,
+                      padx = self.PAD,
+                      pady = self.PAD)
+
+    def getExportPath(self):
+        path = tkfd.askdirectory()
+        self.pathLabelVar.set(path)
+        self.exportWindow.lift()
+
+
+    def exportOkButton(self):
+        filename = self.exportNameTextbox.get('1.0', tk.END)
+        filename = filename.replace('.csv', '')[:-1]
+        path = self.pathLabelVar.get()
+        if (os.path.isdir(path)):
+            csvModule.exportToCSV(self.calendarListBox, filename, path)    
+            self.exportWindow.destroy()
+        else:
+            self.pathLabelVar.set('Invalid path selected')
+        
+
+    def importFromCSVButton(self):
+
+        pass

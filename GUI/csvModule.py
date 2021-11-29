@@ -1,5 +1,6 @@
 import csv
 import guiListbox
+import tkinter as tk
 import os
 
 def exportToCSV(listbox, filename, path):
@@ -16,6 +17,11 @@ def exportToCSV(listbox, filename, path):
         for i in range(0,size):
             currentIndex = guiListbox.splitIndex(listbox.get(i))
             writer.writerow([currentIndex[0], currentIndex[1], currentIndex[2], currentIndex[3]])
-        
-        writer.close()
 
+
+def importFromCSV(listBox, path):
+    with open (path, 'r') as csvFile:
+        reader = csv.reader(csvFile)
+        next(reader) # Skips header
+        for row in reader:
+            listBox.insert(tk.END, '{0:^15}  {1:^15}  {2:^15}  {3:^15}'.format(row[0], row[1], row[2], row[3]))

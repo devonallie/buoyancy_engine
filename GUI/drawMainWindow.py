@@ -261,6 +261,7 @@ class MainGUIWindow:
                       padx = self.PAD,
                       pady = self.PAD)
 
+
     def getExportPath(self):
         path = tkfd.askdirectory()
         self.pathLabelVar.set(path)
@@ -279,5 +280,29 @@ class MainGUIWindow:
         
 
     def importFromCSVButton(self):
+        self.importWindow = tk.Toplevel(self.root)
+        self.importWindow.title('Import from CSV')
+        self.csvPathVar = tk.StringVar()
+        self.csvPathVar.set('Select a csv')
+        self.importLabel = tk.Label(master = self.importWindow,
+                                    textvariable = self.csvPathVar)
+        self.importLabel.grid(row = 0, 
+                              column = 0,
+                              padx = self.PAD,
+                              pady = self.PAD,
+                              sticky = 'NW')
+        importButton = tk.Button(master = self.importWindow,
+                                 text = 'Select a file',
+                                 command = self.selectImportFile)
+        importButton.grid(row = 0,
+                          column = 1,
+                          padx = self.PAD,
+                          pady = self.PAD,
+                          sticky = 'NW')
 
-        pass
+
+    def selectImportFile(self):
+        path = tkfd.askopenfilename(defaultextension = '.csv')
+        csvModule.importFromCSV(self.calendarListBox, path)
+        self.importWindow.destroy()
+        

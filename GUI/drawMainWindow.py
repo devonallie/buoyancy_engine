@@ -6,6 +6,8 @@ import datetime
 import guiListbox
 import csvModule
 import os
+import serial
+import serial.tools.list_ports as st
 
 class MainGUIWindow:
     def __init__(self):
@@ -15,6 +17,11 @@ class MainGUIWindow:
                           height = 109)
         self.PAD = 5
         self.calendarEntries = []
+        self.selectedCOMPort = tk.StringVar()
+        comList = st.comports()
+        if (len(comList) == 0):
+            comList = [0]
+        self.selectedCOMPort.set(comList[0])
 
         self.root.columnconfigure(index = 0,
                                   weight = 1)
@@ -165,6 +172,12 @@ class MainGUIWindow:
                                column = 0,
                                padx = self.PAD,
                                pady = self.PAD)
+        
+        self.comCombo = tk.OptionMenu(self.sendFrame, comList[0], *comList)
+        self.comCombo.grid(row = 0,
+                           column = 2,
+                           padx = self.PAD,
+                           pady = self.PAD)
 
         self.autoUpdate()
 

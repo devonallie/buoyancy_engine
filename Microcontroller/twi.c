@@ -18,134 +18,181 @@
 #include <stdbool.h>
 #include "usart.c"
 
+#define TWINT_FLAG_LOW (!(TWCR & _BV (TWSTO)))
+
+/*CONFIG*/
 #define MS5387 0x76
 #define TWDR_SLAVE_ADDRESS (MS5387 << 1)
-#define SCL_FREQ_MAX 400000
-#define SCL_FREQ SCL_FREQ_MAX
-#define F_CPU 16000000UL
+#define SCL_FREQ 400000
 #define SCL_PRESCALE 1
+#define PROM_SIZE 7
+
+/*CONFIG-DEPENDANT*/
 #define TWI_BAUD  ((F_CPU/SCL_FREQ) - 16)/2/SCL_PRESCALE
-#define OCR2A_MAX 255
 
-	char str_test[80];
-typedef union twi_data {
-	struct {
-		uint8_t first_byte  : 8;
-		uint8_t second_byte : 8;
-		uint8_t third_byte  : 8;
-	} bytewise;
-	uint32_t contiguous;	
-} twi_data;
+typedef enum {
+	START 		= 0b11100100,
+	SEND_SLA 	= 0b11001100,
+	SEND_COMMAND 	= 0b11001100,
+	RECEIVE_DATA 	= 0b11001100,
+	RECEIVE_DATA_N 	= 0b10001100,
+	STOP 		= 0b10010100,
+} action_code;
 
+typedef enum {
+	NIL = 0,
+	SLA_W = TWDR_SLAVE_ADDRESS,
+	SLA_R = TWDR_SLAVE_ADDRESS + 1,
+	RESET = 0x1E,
+	READ_PROM = 0xA0,
+	READ_ADC = 0x00,
+	TEMPERATURE_CONVERSION = 0x58,
+	PRESSURE_CONVERSION = 0x48,
+} command;
 
-bool twi_send_start (void);
-bool twi_send_addr_r (void);
-bool twi_send_addr_w (void);
-bool twi_send_command (uint8_t command);
-bool twi_recieve_adc (uint32_t *adc_buffer);
-bool twi_send_stop (void);
-bool twi_receive_prom (uint16_t *prom_buffer);
-bool twi_validate_status (uint8_t status);
+typedef enum {
+	C0,
+	C1,
+	C2,
+	C3,
+	C4,
+	C5,
+	C6,
+} prom_address;
+
+void twi_init (void);
 void twi_disable (void);
-
-
+void twi_enable (void);
+void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status);
+int32_t get_pressure (void);
 
 void twi_init (void)
 {	
-	PRR   &= ~_BV (PRTWI); //powers on twi
-	TWBR   =   TWI_BAUD;	 // pg 221 gves the formula for this, 100 kHz supposedly
-	TWSR  &= ~_BV (TWPS1) | ~_BV (TWPS0); //prescale of 1
-	TWCR  |=  _BV (TWEA)  |  _BV (TWEN);//enables twi, send ACKs
-	//15ms max for adc conversion
-}
-/*
- * starts the twi line
- */
-bool twi_send_start (void)
-{
-	TWCR |= _BV (TWINT) | _BV (TWSTA);
-	while (!(TWCR & _BV (TWINT)));
-	return twi_validate_status (TW_START);
-}
-/*
- * alerts slave that we interested in it
- */
-bool twi_send_addr_r (void)
-{
-	TWDR  = TWDR_SLAVE_ADDRESS | TW_READ;
-	TWCR &= ~_BV (TWSTA);
-	TWCR |= _BV (TWINT);
-	while (!(TWCR & _BV (TWINT)));
-	return twi_validate_status (TW_MR_SLA_ACK);
+	PRR   &= ~_BV (PRTWI); 
+	TWBR   =   TWI_BAUD;
+	TWSR  &= ~_BV (TWPS1) | ~_BV (TWPS0);	
 }
 
-bool twi_send_addr_w (void)
+void twi_enable (void)
 {
-	TWDR  = TWDR_SLAVE_ADDRESS | TW_WRITE;
-	TWCR &= ~_BV (TWSTA);
-	TWCR |= _BV (TWINT);
-	while (!(TWCR & _BV (TWINT)));
-	return twi_validate_status (TW_MT_SLA_ACK);
-}
-bool twi_send_command (uint8_t command)
-{
-	TWDR  = command;
-	TWCR |= _BV (TWINT);
-	while (!(TWCR & _BV (TWINT)));
-	return twi_validate_status (TW_MT_DATA_ACK);
-}
-
-bool twi_receive_adc (uint32_t *adc_buffer)
-{
-	TWCR &= ~_BV (TWSTA);
-	TWCR |= _BV (TWINT) | _BV (TWEA);
-	while (!(TWCR & _BV (TWINT)));
-	*adc_buffer |= (uint32_t) TWDR << 16;
-	
-	TWCR |= _BV (TWINT);
-	while (!(TWCR & _BV (TWINT)));
-	*adc_buffer |= (uint32_t) TWDR << 8;
-
-	TWCR &= ~_BV (TWEA);
-	TWCR |= _BV (TWINT);
-	while (!(TWCR & _BV (TWINT)));
-	*adc_buffer |= (uint32_t) TWDR;
-
-	return twi_validate_status (TW_MR_DATA_NACK);
-}
-bool twi_receive_prom (uint16_t *prom_buffer)
-{
-	TWCR &= ~_BV (TWSTA);
-	TWCR |= _BV (TWINT) | _BV (TWEA);
-	while (!(TWCR & _BV (TWINT)));
-	*prom_buffer |= (uint16_t) TWDR << 8;
-	TWCR &= ~_BV (TWEA);
-	TWCR |= _BV (TWINT);
-	while (!(TWCR & _BV (TWINT)));
-	*prom_buffer |= (uint16_t) TWDR;
-
-	return twi_validate_status (TW_MR_DATA_NACK);
-}
-
-
-bool twi_send_stop (void)
-{
-	TWCR |= _BV (TWINT) | _BV (TWSTO);
-	while (!(TWCR & _BV (TWSTO)));
-	return twi_validate_status (TW_NO_INFO); //*shug emoji*
-}
-
-bool twi_validate_status (uint8_t status)
-{
-	if (TW_STATUS != status) { //checks TWSR 7:3
-		return false;
-	} else {
-		return true;
-	}
+	PRR &= ~_BV (PRTWI);
 }
 
 void twi_disable (void)
 {
-	PRR |= PRTWI;
+	PRR |= _BV (PRTWI);
 }
+
+
+void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status)
+{
+	TWCR = ac;
+	TWDR = cmd;
+	while (TWINT_FLAG_LOW);
+	*data_buffer = TWDR;
+	if (TWSR == status) {
+		usart_write ("ACTION CODE SUCCESSFUL\n\r");
+	}
+}
+
+int32_t get_pressure (void)
+{	
+	//START OF RESET SENSOR SEQUENCE
+	  //SEND RESET COMMAND
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
+	twi (SEND_COMMAND, RESET, NULL, TW_MT_DATA_ACK);
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+
+	_delay_ms (10);
+	//END OF RESET SENSOR SEQUENCE
+	
+
+	//START OF READ PROM SEQUENCE
+	uint16_t prom[PROM_SIZE];
+	uint8_t *data_buffer = 0;
+	for (int i = 0; i < PROM_SIZE; i++) {
+		//SEND READ COMMAND
+		twi (START, NIL, NULL, TW_START);
+		twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
+		twi (SEND_COMMAND, READ_PROM + 2*i, NULL, TW_MT_DATA_ACK);
+		twi (STOP, NIL, NULL, TW_NO_INFO);
+		//RECIEVE PROM DATA
+		twi (START, NIL, NULL, TW_START);
+		twi (SEND_SLA, SLA_R, NULL, TW_MR_SLA_ACK);
+		twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
+		prom[i] = (uint16_t) *data_buffer << 8;
+		twi (RECEIVE_DATA_N, NIL, data_buffer, TW_MR_DATA_NACK);
+		prom[i] |= (uint16_t) *data_buffer;
+		twi (STOP, NIL, NULL, TW_NO_INFO);
+	}
+	//END OF READ PROM SEQUENCE
+	
+
+	//START OF READ UNCOMPENSATED PRESSURE SEQUENCE
+	  //SEND PRESSURE CONVERSION COMMAND
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
+	twi (SEND_COMMAND, PRESSURE_CONVERSION, NULL, TW_MT_DATA_ACK);
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+	_delay_ms (10);
+	  //SEND READ COMMAND
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
+	twi (SEND_COMMAND, READ_ADC, NULL, TW_MT_DATA_ACK);
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+	  //RECIEVE UNCOMPENSATED PRESSURE 
+	uint32_t D1, D2;
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_R, NULL, TW_MR_SLA_ACK);
+	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
+	D1  = (uint32_t) *data_buffer << 16;
+	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
+	D1 |= (uint32_t) *data_buffer << 8;
+	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_NACK);
+	D1 |= (uint32_t) *data_buffer;
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+	//END OF READ UNCOMPENSATED PRESSURE SEQUENCE
+	
+	//START OF READ UNCOMPENSATED TEMPERATURE SEQUENCE
+	  //SEND TEMPERATURE CONVERSION COMMAND
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
+	twi (SEND_COMMAND, TEMPERATURE_CONVERSION, NULL, TW_MT_DATA_ACK);
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+
+	_delay_ms (10);
+
+	  //SEND READ COMMAND
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
+	twi (SEND_COMMAND, READ_ADC, NULL, TW_MT_DATA_ACK);
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+	
+	  //READ UNCOMPENSATED TEMPERATURE 
+	twi (START, NIL, NULL, TW_START);
+	twi (SEND_SLA, SLA_R, NULL, TW_MR_SLA_ACK);
+	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
+	D2  = (uint32_t) *data_buffer << 16;
+	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
+	D2  = (uint32_t) *data_buffer << 8;
+	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_NACK);
+	D2  = (uint32_t) *data_buffer;
+	twi (STOP, NIL, NULL, TW_NO_INFO);
+	//END OF READ UNCOMPENSATED TEMPERATURE SEQUENCE
+	
+	//FIRST ORDER COMPENSATION SEQUENCE
+	char str[1024];
+	int32_t dT = D2 - (uint32_t) prom[C5]*(1 << 8);
+	int32_t TEMP = 2000l + (int64_t) dT*prom[C6]/((uint32_t) 1 << 23);
+	int64_t OFF =  (int64_t) prom[C2]*((int64_t) 1 << 17)
+		     + (int64_t) prom[C4]*dT/((int64_t) 1 << 6);
+	int64_t SENS = (int64_t) prom[C1]*((int64_t) 1 << 16)
+		     + (int64_t) prom[C3]*dT/((int64_t) 1 << 7);
+	int32_t P = (D1*SENS/((int64_t) 1 << 21) - OFF)/((int64_t) 1 << 15);
+		
+	return P;
+}
+
+
 

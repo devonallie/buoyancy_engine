@@ -22,28 +22,55 @@
 #define ADC_ON _BV (ADEN)
 #define ADC_START_CONVERSION _BV (ADSC)
 #define CONVERSION_IN_PROGRESS (ADCSRA & _BV (ADSC))
+#define ADC_PRESCALE (_BV (ADPS2) | _BV (ADPS1) | _BV (ADPS0))
 
 /*CONFIG*/
 
 #define ADC_VREF AVCC
-#define ADC_PIN 0 
-#define ADC_PRESCALE 128 //2~128, by 2s
+#define ADC_READ_PIN 0
+#define ADC_BIAS_PIN 1
+#define BLADDER_DRAIN_PIN 2
+#define LOW_BATTERY_THRESHOLD 20
 
 void battery_init (void);
-uint16_t battery_read (void);
+bool battery_state (void);
+void battery_enable (void);
+void battery_disable (void);
 
 void battery_init (void)
 {
-	ADMUX  |= ADC_VREF | ADC_PIN; //ADC0, external voltage refence
-	ADCSRA |= ADC_ON | ADC_PRESCALE; // sets ADC clock to 125 kHz which is within range of defined behaviour and max resolution 
-	DIDR0  |= ADC_PIN; //disable digital pin function, PIN7, and PIN7 not possible
+
+	DDRC   |= _BV (ADC_BIAS_PIN);
+	DDRB   |= _BV (BLADDER_DRAIN_PIN);
+	PORTC  |= _BV (ADC_BIAS_PIN);
+	ADMUX  |= ADC_VREF | ADC_READ_PIN; 
+	ADCSRA |= ADC_ON   | ADC_PRESCALE | ADC_START_CONVERSION; 
+	DIDR0  |= ADC_READ_PIN;
 }
 
-uint16_t battery_read (void)
+void battery_enable (void)
 {
+	PPR &= ~_BV (PRADC);
+}
+
+void battery_disable (void)
+{
+	PRR |= _BV (PRADC);
+}
+
+bool battery_state (void)
+{
+	PORTC &= ~_BV (ADC_BIAS_PIN);
 	ADCSRA |= ADC_START_CONVERSION;
 	while (CONVERSION_IN_PROGRESS);
-	return ADCW;
+	if (ADCW <= LOW_BATTERY_THRESHOLD) {
+		PORTB &= ~_BV (BLADDER_DRAIN_PIN);
+		return true;
+	}			
+	PORTC |= _BV (PORTC1);
+	PORTB |= _BV (BLADDER_DRAIN_PIN);
+	return false;
+
+
 }
 
-//this wont work properly because there are some things i'm not seeing. more at 11'

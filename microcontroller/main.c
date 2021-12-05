@@ -38,7 +38,7 @@ enum battery_state{ALIVE, DEAD};
 void get_dive_schedule (void);
 void get_user_input (void);
 
-uint8_t target_depth = 0;
+uint16_t target_depth = 0;
 
 int main (void)
 {
@@ -59,8 +59,11 @@ void get_dive_schedule (void)
 	for (int i = 0; i < DATA_SIZE; i++) {
 		user_data[i] = usart_read ();
 	}
-	target_depth  = user_data[4];
-	target_depth |= ((uint16_t) user_data[5] << 8);
+	target_depth  = (uint16_t) user_data[5];
+	target_depth |= ((uint16_t) user_data[4] << 8);
+	char str[80];
+	sprintf (str, "depth = %u\n\r", target_depth);
+	usart_write (str);
 }
 
 void get_user_input (void)
@@ -75,8 +78,8 @@ void get_user_input (void)
 			
 		} else {
 			usart_write ("\n\r");
-			if (atoi (target_str) > target_depth) {
-				target_depth = atoi (target_str);
+			if ((uint16_t)atoi (target_str) > target_depth) {
+				target_depth = (uint16_t)atoi (target_str);
 				memset (&target_str[0], 0, sizeof (target_str));
 			}
 		}

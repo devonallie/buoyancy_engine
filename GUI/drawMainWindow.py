@@ -10,7 +10,7 @@ import os
 class MainGUIWindow:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title('Buoyancy engine GUI')
+        self.root.title('Buoyancy Engine Controller')
         self.root.minsize(width = 335,
                           height = 109)
         self.PAD = 5
@@ -42,7 +42,7 @@ class MainGUIWindow:
                             sticky = 'NW')
         # dateTextBox
         self.dateEntry = tkcalendar.DateEntry(master = self.timeFrame,
-                                              date_pattern = 'y-mm-dd')
+                                              date_pattern = 'yy-mm-dd')
         #self.dateEntry.set_date(date = datetime.datetime.date)
         self.dateEntry.grid(column = 0,
                             row = 1)
@@ -124,7 +124,7 @@ class MainGUIWindow:
                                         weight = 2)
         # Calendar label
         self.calendaLabel = tk.Label(master = self.calendarFrame,
-                                     text = 'date              time              depth         time (epoch)',
+                                     text = 'DATE       TIME            DEPTH         TIME (EPOCH)',
                                      width = 30,
                                      justify = 'center')
         self.calendaLabel.grid(row = 0,

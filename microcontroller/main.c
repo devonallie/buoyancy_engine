@@ -35,6 +35,11 @@ void modules_init (void);
 uint8_t user_data[DATA_SIZE];
 enum battery_state{ALIVE, DEAD};
 
+void get_dive_schedule (void);
+void get_user_input (void);
+
+uint8_t target_depth = 0;
+
 int main (void)
 {
 	modules_init ();	
@@ -42,9 +47,9 @@ int main (void)
 
 	while (get_pressure() < target_depth*100) {
 		while (battery_state () == DEAD);
-		servo_enable (10);
+		servo_run (10);
 		_delay_ms (100);
-		servo_enable (5);
+		servo_run (5);
 		_delay_ms (100);
 	}
 	return EXIT_SUCCESS;
@@ -54,12 +59,14 @@ void get_dive_schedule (void)
 	for (int i = 0; i < DATA_SIZE; i++) {
 		user_data[i] = usart_read ();
 	}
-	target_depth  = user_data[DEPTH_LSB]
-	target_depth |= ((uint16_t)user_data[DEPTH_MSB] << 8);
+	target_depth  = user_data[4];
+	target_depth |= ((uint16_t)user_data[5] << 8);
 }
 
 void get_user_input (void)
 {
+	uint8_t buff = 0;
+	char str[80], target_str[80];
 	while (((buff = usart_read ())) != ASCII_d) {
 		if ((buff != 13)) {
 			sprintf (str, "%c", buff);

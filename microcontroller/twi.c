@@ -18,7 +18,8 @@
 #include <stdbool.h>
 #include "usart.c"
 
-#define TWINT_FLAG_LOW (!(TWCR & _BV (TWSTO)))
+#define TWINT_FLAG_LOW (!(TWCR & _BV (TWINT)))
+#define TWSTO_FLAG_LOW (!(TWCR & _BV (TWSTO)))
 
 /*CONFIG*/
 #define MS5387 0x76
@@ -41,8 +42,8 @@ typedef enum {
 
 typedef enum {
 	NIL = 0,
-	SLA_W = TWDR_SLAVE_ADDRESS,
-	SLA_R = TWDR_SLAVE_ADDRESS + 1,
+	SLA_W = TWDR_SLAVE_ADDRESS | TW_WRITE,
+	SLA_R = TWDR_SLAVE_ADDRESS | TW_READ,
 	RESET = 0x1E,
 	READ_PROM = 0xA0,
 	READ_ADC = 0x00,
@@ -88,10 +89,13 @@ void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status)
 {
 	TWCR = ac;
 	TWDR = cmd;
-	while (TWINT_FLAG_LOW);
+	if (status == TW_NO_INFO) {
+		while (TWSTO_FLAG_LOW);
+	} else {
+		while (TWINT_FLAG_LOW);
+	}
 	*data_buffer = TWDR;
 	if (TWSR == status) {
-		usart_write ("ACTION CODE SUCCESSFUL\n\r");
 	}
 }
 
@@ -182,9 +186,8 @@ int32_t get_pressure (void)
 	//END OF READ UNCOMPENSATED TEMPERATURE SEQUENCE
 	
 	//FIRST ORDER COMPENSATION SEQUENCE
-	char str[1024];
 	int32_t dT = D2 - (uint32_t) prom[C5]*(1 << 8);
-	int32_t TEMP = 2000l + (int64_t) dT*prom[C6]/((uint32_t) 1 << 23);
+	//int32_t TEMP = 2000l + (int64_t) dT*prom[C6]/((uint32_t) 1 << 23);
 	int64_t OFF =  (int64_t) prom[C2]*((int64_t) 1 << 17)
 		     + (int64_t) prom[C4]*dT/((int64_t) 1 << 6);
 	int64_t SENS = (int64_t) prom[C1]*((int64_t) 1 << 16)

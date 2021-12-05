@@ -50,7 +50,7 @@ void battery_init (void)
 
 void battery_enable (void)
 {
-	PPR &= ~_BV (PRADC);
+	PRR &= ~_BV (PRADC);
 }
 
 void battery_disable (void)

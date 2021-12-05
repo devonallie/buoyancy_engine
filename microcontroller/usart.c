@@ -26,8 +26,8 @@
 #define TRANSMIT_ENABLE _BV (TXEN0)
 #define RECEIVE_ENABLE _BV (RXEN0)
 #define MAX_QUEUE_SIZE 100
-#define WRITE_BUFFER_IS_FULL (!( & _BV (UDRE0)))
-#define READ_BUFFER_IS_FULL  !(UCSR0A & _BV (RXC0))
+#define WRITE_BUFFER_IS_FULL (!(UCSR0A & _BV (UDRE0)))
+#define READ_BUFFER_IS_FULL  (!(UCSR0A & _BV (RXC0)))
 
 
 void usart_init (void);

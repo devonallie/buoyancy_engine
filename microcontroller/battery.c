@@ -77,7 +77,5 @@ bool battery_state (void)
 	PORTC |= _BV (PORTC1);
 	PORTB |= _BV (BLADDER_DRAIN_PIN);
 	return false;
-
-
 }
 

@@ -43,8 +43,6 @@ uint8_t target_depth = 0;
 int main (void)
 {
 	modules_init ();	
-	while (get_pressure ());
-	/*
 	get_dive_schedule ();
 
 	while (get_pressure() < target_depth*100) {
@@ -54,7 +52,6 @@ int main (void)
 		servo_run (5);
 		_delay_ms (100);
 	}
-	*/
 	return EXIT_SUCCESS;
 }
 void get_dive_schedule (void)
@@ -63,7 +60,7 @@ void get_dive_schedule (void)
 		user_data[i] = usart_read ();
 	}
 	target_depth  = user_data[4];
-	target_depth |= ((uint16_t)user_data[5] << 8);
+	target_depth |= ((uint16_t) user_data[5] << 8);
 }
 
 void get_user_input (void)

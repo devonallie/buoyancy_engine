@@ -43,11 +43,8 @@ uint8_t target_depth = 0;
 int main (void)
 {
 	modules_init ();	
-	while(true) {
-		char str [80];
-		sprintf (str, "PRESSURE: %lu\n\r", get_pressure ());
-		usart_write (str);
-	}
+	while (get_pressure ());
+	/*
 	get_dive_schedule ();
 
 	while (get_pressure() < target_depth*100) {
@@ -57,6 +54,7 @@ int main (void)
 		servo_run (5);
 		_delay_ms (100);
 	}
+	*/
 	return EXIT_SUCCESS;
 }
 void get_dive_schedule (void)

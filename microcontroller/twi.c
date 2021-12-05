@@ -27,6 +27,9 @@
 #define SCL_FREQ 400000
 #define SCL_PRESCALE 1
 #define PROM_SIZE 7
+#define P_WIDTH 2
+#define CONVERSION_TIME_MS 10
+#define STRING_MAX 80
 
 /*CONFIG-DEPENDANT*/
 #define TWI_BAUD  ((F_CPU/SCL_FREQ) - 16)/2/SCL_PRESCALE
@@ -65,7 +68,7 @@ void twi_init (void);
 void twi_disable (void);
 void twi_enable (void);
 void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status);
-int32_t get_pressure (void);
+uint16_t get_pressure (void);
 
 void twi_init (void)
 {	
@@ -100,7 +103,7 @@ void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status)
 	}
 }
 
-int32_t get_pressure (void)
+uint16_t get_pressure (void)
 {	
 	//START OF RESET SENSOR SEQUENCE
 	  //SEND RESET COMMAND
@@ -109,7 +112,7 @@ int32_t get_pressure (void)
 	twi (SEND_COMMAND, RESET, NULL, TW_MT_DATA_ACK);
 	twi (STOP, NIL, NULL, TW_NO_INFO);
 
-	_delay_ms (10);
+	_delay_ms (CONVERSION_TIME_MS);
 	//END OF RESET SENSOR SEQUENCE
 	
 
@@ -120,7 +123,7 @@ int32_t get_pressure (void)
 	  //SEND READ COMMAND
 		twi (START, NIL, NULL, TW_START);
 		twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
-		twi (SEND_COMMAND, READ_PROM + 2*i, NULL, TW_MT_DATA_ACK);
+		twi (SEND_COMMAND, READ_PROM + P_WIDTH*i, NULL, TW_MT_DATA_ACK);
 		twi (STOP, NIL, NULL, TW_NO_INFO);
 	  //RECIEVE PROM DATA
 		twi (START, NIL, NULL, TW_START);
@@ -140,7 +143,7 @@ int32_t get_pressure (void)
 	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
 	twi (SEND_COMMAND, PRESSURE_CONVERSION, NULL, TW_MT_DATA_ACK);
 	twi (STOP, NIL, NULL, TW_NO_INFO);
-	_delay_ms (10);
+	_delay_ms (CONVERSION_TIME_MS);
   	  //SEND READ COMMAND
 	twi (START, NIL, NULL, TW_START);
 	twi (SEND_SLA, SLA_W, NULL, TW_MT_SLA_ACK);
@@ -167,7 +170,7 @@ int32_t get_pressure (void)
 	twi (SEND_COMMAND, TEMPERATURE_CONVERSION, NULL, TW_MT_DATA_ACK);
 	twi (STOP, NIL, NULL, TW_NO_INFO);
 
-	_delay_ms (10);
+	_delay_ms (CONVERSION_TIME_MS);
 
 	  //SEND READ COMMAND
 	twi (START, NIL, NULL, TW_START);
@@ -195,14 +198,14 @@ int32_t get_pressure (void)
 	int64_t SENS = (int64_t) prom[C1]*((int64_t) 1 << 16)
 		     + (int64_t) prom[C3]*dT/((int64_t) 1 << 7);
 	int32_t P = (D1*SENS/((int64_t) 1 << 21) - OFF)/((int64_t) 1 << 15);
-	
-	char str[80];
-	sprintf (str, "TEMP: %li\n\r", TEMP);
+
+	char str[STRING_MAX];
+	sprintf (str, "TEMPERATURE: %u degrees C\n\r", (uint16_t) TEMP/100);
 	usart_write (str);
-	sprintf (str, "P: %li\n\r", P);
+	sprintf (str, "PRESSURE: %u m below sea\n\r", (uint16_t) P/10000);
 	usart_write (str);
 	
-	return P;
+	return P/10000;
 }
 
 

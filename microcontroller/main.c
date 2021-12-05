@@ -26,9 +26,16 @@
 #include "servo.c"
 
 #define ASCII_d 100
+#define ASCII_RC 13
+#define DEPTH_LSB 5
+#define DEPTH_MSB 4
+#define STRING_MAX 80
 
 /*CONFIGURE*/
 #define DATA_SIZE 6
+#define SERVO_ACTIVATION_MAX 10
+#define SERVO_ACTIVATION_MIN 5
+#define SERVO_DELAY_MS 100
 
 void modules_init (void);
 
@@ -45,12 +52,12 @@ int main (void)
 	modules_init ();	
 	get_dive_schedule ();
 
-	while (get_pressure() < target_depth*100) {
+	while (get_pressure() < target_depth) {
 		while (battery_state () == DEAD);
-		servo_run (10);
-		_delay_ms (100);
-		servo_run (5);
-		_delay_ms (100);
+		servo_run (SERVO_ACTIVATION_MAX);
+		_delay_ms (SERVO_DELAY_MS);
+		servo_run (SERVO_ACTIVATION_MIN);
+		_delay_ms (SERVO_DELAY_MS);
 	}
 	return EXIT_SUCCESS;
 }
@@ -59,19 +66,16 @@ void get_dive_schedule (void)
 	for (int i = 0; i < DATA_SIZE; i++) {
 		user_data[i] = usart_read ();
 	}
-	target_depth  = (uint16_t) user_data[5];
-	target_depth |= ((uint16_t) user_data[4] << 8);
-	char str[80];
-	sprintf (str, "depth = %u\n\r", target_depth);
-	usart_write (str);
+	target_depth  = user_data[DEPTH_LSB];
+	target_depth |= ((uint16_t) user_data[DEPTH_MSB] << 8);
 }
 
 void get_user_input (void)
 {
 	uint8_t buff = 0;
-	char str[80], target_str[80];
+	char str[STRING_MAX], target_str[STRING_MAX];
 	while (((buff = usart_read ())) != ASCII_d) {
-		if ((buff != 13)) {
+		if ((buff != ASCII_RC)) {
 			sprintf (str, "%c", buff);
 			usart_write (str);
 			strcat (target_str, str);

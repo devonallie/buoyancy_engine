@@ -18,13 +18,15 @@
 #define PWM_OC1A 		 _BV (DDB1)
 #define SERVO_BIAS_PIN		 _BV (DDB0)
 #define SET_OC1A_ON_DOWN_COUNT	 _BV (COM1A1)
-#define WAVE_GEN_MODE_8		 _BV (WGM13) //Phase correct & frequency correct PWM
+#define WAVE_GEN_MODE_8		 _BV (WGM13) //Phase & frequency correct PWM
 
 #define N_1024			(_BV (CS12) | _BV (CS10))
 #define N_256			 _BV (CS12)
 #define N_64			(_BV (CS11) | _BV (CS10))
 #define N_8			 _BV (CS11)
 #define N_1			 _BV (CS10)
+
+#define PERCENT 100
 
 /* CONFIGURATION */
 #define CLK_PRESCALE N_1024
@@ -47,7 +49,7 @@ void servo_run (float duty_cycle)
 	PRR   &= ~_BV (PRTIM1); 
 	PORTD |= SERVO_BIAS_PIN;
 	ICR1   = F_CPU/F_PWM/(1 << (CLK_PRESCALE + 6));
-	OCR1A  = (ICR1*duty_cycle)/100;	
+	OCR1A  = (ICR1*duty_cycle)/PERCENT;	
 }
 
 void servo_enable (void)

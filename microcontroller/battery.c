@@ -17,6 +17,7 @@
 #include <util/delay.h>
 #include <util/twi.h>
 #include <stdio.h>
+#include <usart.c>
 
 #define AVCC _BV (REFS0)
 #define ADC_ON _BV (ADEN)
@@ -31,6 +32,9 @@
 #define ADC_BIAS_PIN 1
 #define BLADDER_DRAIN_PIN 2
 #define LOW_BATTERY_THRESHOLD 20
+#define STRING_MAX 80
+#define ADC_BIT_DEPTH 1024
+#define PERCENT 100
 
 void battery_init (void);
 bool battery_state (void);
@@ -63,6 +67,9 @@ bool battery_state (void)
 	PORTC &= ~_BV (ADC_BIAS_PIN);
 	ADCSRA |= ADC_START_CONVERSION;
 	while (CONVERSION_IN_PROGRESS);
+	char str[STRING_MAX];
+	sprintf (str, "BATTERY PERCENT: %u \n\r", ADCW*ADC_BIT_DEPTH/PERCENT);
+	usart_write (str);
 	if (ADCW <= LOW_BATTERY_THRESHOLD) {
 		PORTB &= ~_BV (BLADDER_DRAIN_PIN);
 		return true;

@@ -43,6 +43,11 @@ uint8_t target_depth = 0;
 int main (void)
 {
 	modules_init ();	
+	while(true) {
+		char str [80];
+		sprintf (str, "PRESSURE: %lu\n\r", get_pressure ());
+		usart_write (str);
+	}
 	get_dive_schedule ();
 
 	while (get_pressure() < target_depth*100) {

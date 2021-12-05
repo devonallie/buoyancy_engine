@@ -32,11 +32,11 @@
 #define TWI_BAUD  ((F_CPU/SCL_FREQ) - 16)/2/SCL_PRESCALE
 
 typedef enum {
-	START 		= 0b11100100,
-	SEND_SLA 	= 0b11001100,
-	SEND_COMMAND 	= 0b11001100,
-	RECEIVE_DATA 	= 0b11001100,
-	RECEIVE_DATA_N 	= 0b10001100,
+	START 		= 0b10100100,
+	SEND_SLA 	= 0b11000100,
+	SEND_COMMAND 	= 0b11000100,
+	RECEIVE_DATA 	= 0b11000100,
+	RECEIVE_DATA_N 	= 0b10000100,
 	STOP 		= 0b10010100,
 } action_code;
 
@@ -87,8 +87,8 @@ void twi_disable (void)
 
 void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status)
 {
-	TWCR = ac;
 	TWDR = cmd;
+	TWCR = ac;
 	if (status == TW_NO_INFO) {
 		while (TWSTO_FLAG_LOW);
 	} else {
@@ -97,10 +97,14 @@ void twi (action_code ac, command cmd, uint8_t *data_buffer, uint8_t status)
 	*data_buffer = TWDR;
 	if (TWSR == status) {
 	}
+	char str[80];
+	sprintf (str, "TWSR: %02X\n\r", TWSR);
+	usart_write (str);
 }
 
 int32_t get_pressure (void)
 {	
+	char str[80];
 	//START OF RESET SENSOR SEQUENCE
 	  //SEND RESET COMMAND
 	twi (START, NIL, NULL, TW_START);
@@ -114,7 +118,7 @@ int32_t get_pressure (void)
 
 	//START OF READ PROM SEQUENCE
 	uint16_t prom[PROM_SIZE];
-	uint8_t *data_buffer = 0;
+	uint8_t data_buffer;
 	for (int i = 0; i < PROM_SIZE; i++) {
 		//SEND READ COMMAND
 		twi (START, NIL, NULL, TW_START);
@@ -124,12 +128,16 @@ int32_t get_pressure (void)
 		//RECIEVE PROM DATA
 		twi (START, NIL, NULL, TW_START);
 		twi (SEND_SLA, SLA_R, NULL, TW_MR_SLA_ACK);
-		twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
-		prom[i] = (uint16_t) *data_buffer << 8;
-		twi (RECEIVE_DATA_N, NIL, data_buffer, TW_MR_DATA_NACK);
-		prom[i] |= (uint16_t) *data_buffer;
+		twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_ACK);
+		prom[i] |= (uint16_t) data_buffer << 8;
+		twi (RECEIVE_DATA_N, NIL, &data_buffer, TW_MR_DATA_NACK);
+		prom[i] |= (uint16_t) data_buffer;
 		twi (STOP, NIL, NULL, TW_NO_INFO);
+		
+		sprintf (str, "prom %d = %u\n\r", i, prom[i]);
+		usart_write (str);
 	}
+	usart_write ("end of prom\n\r");
 	//END OF READ PROM SEQUENCE
 	
 
@@ -146,15 +154,16 @@ int32_t get_pressure (void)
 	twi (SEND_COMMAND, READ_ADC, NULL, TW_MT_DATA_ACK);
 	twi (STOP, NIL, NULL, TW_NO_INFO);
 	  //RECIEVE UNCOMPENSATED PRESSURE 
-	uint32_t D1, D2;
+	uint32_t D1 = 0;
+	uint32_t D2 = 0;
 	twi (START, NIL, NULL, TW_START);
 	twi (SEND_SLA, SLA_R, NULL, TW_MR_SLA_ACK);
-	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
-	D1  = (uint32_t) *data_buffer << 16;
-	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
-	D1 |= (uint32_t) *data_buffer << 8;
-	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_NACK);
-	D1 |= (uint32_t) *data_buffer;
+	twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_ACK);
+	D1 |= (uint32_t) data_buffer << 16;
+	twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_ACK);
+	D1 |= (uint32_t) data_buffer << 8;
+	twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_NACK);
+	D1 |= (uint32_t) data_buffer;
 	twi (STOP, NIL, NULL, TW_NO_INFO);
 	//END OF READ UNCOMPENSATED PRESSURE SEQUENCE
 	
@@ -176,12 +185,12 @@ int32_t get_pressure (void)
 	  //READ UNCOMPENSATED TEMPERATURE 
 	twi (START, NIL, NULL, TW_START);
 	twi (SEND_SLA, SLA_R, NULL, TW_MR_SLA_ACK);
-	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
-	D2  = (uint32_t) *data_buffer << 16;
-	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_ACK);
-	D2  = (uint32_t) *data_buffer << 8;
-	twi (RECEIVE_DATA, NIL, data_buffer, TW_MR_DATA_NACK);
-	D2  = (uint32_t) *data_buffer;
+	twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_ACK);
+	D2  = (uint32_t) data_buffer << 16;
+	twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_ACK);
+	D2  = (uint32_t) data_buffer << 8;
+	twi (RECEIVE_DATA, NIL, &data_buffer, TW_MR_DATA_NACK);
+	D2  = (uint32_t) data_buffer;
 	twi (STOP, NIL, NULL, TW_NO_INFO);
 	//END OF READ UNCOMPENSATED TEMPERATURE SEQUENCE
 	

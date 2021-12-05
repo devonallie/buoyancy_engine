@@ -1,6 +1,7 @@
 import tkinter as tk
 import datetime
-
+import serial 
+port = serial.Serial("/dev/cu.usbserial-110", baudrate=115200, timeout=3.0)
 from tkcalendar.calendar_ import Calendar
 
 def createListBox(self):
@@ -65,3 +66,5 @@ class CalendarEntries():
     def printEntry(self):
         print('Time = {}'.format(self.time))
         print('Depth = {}'.format(self.depth))
+        port.write((int(float(self.time))).to_bytes(4, byteorder='big', signed=False))
+        port.write((int(float(self.depth))).to_bytes(2, byteorder='big', signed=False))

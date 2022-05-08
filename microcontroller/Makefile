@@ -1,6 +1,6 @@
 MCU=atmega328p
 PROGRAMMER=arduino
-BAUD=57600
+BAUD=115200#57600
 F_CPU=16000000UL
 PORT=/dev/cu.usbserial-110
 CC=avr-gcc

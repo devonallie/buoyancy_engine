@@ -4,7 +4,7 @@
  *            through a serial connection to the ATMegaET128 microcontroller.
  * 
  * Ownership: This programme is written for ULTRA Electronics Marine Division.
- *            All software within belongs to them.
+ *            All software within belongs to me.
  *
  */
 
